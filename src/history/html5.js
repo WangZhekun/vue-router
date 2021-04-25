@@ -8,7 +8,7 @@ import { setupScroll, handleScroll } from '../util/scroll'
 import { pushState, replaceState, supportsPushState } from '../util/push-state'
 
 export class HTML5History extends History {
-  _startLocation: string
+  _startLocation: string // 当前地址
 
   constructor (router: Router, base: ?string) {
     super(router, base)
@@ -16,6 +16,7 @@ export class HTML5History extends History {
     this._startLocation = getLocation(this.base)
   }
 
+  // 初始化注销回调列表
   setupListeners () {
     if (this.listeners.length > 0) {
       return
@@ -51,10 +52,12 @@ export class HTML5History extends History {
     })
   }
 
+  // 在浏览器历史中跳转
   go (n: number) {
     window.history.go(n)
   }
 
+  // 跳转，并push浏览器访问历史
   push (location: RawLocation, onComplete?: Function, onAbort?: Function) {
     const { current: fromRoute } = this
     this.transitionTo(location, route => {
@@ -64,6 +67,7 @@ export class HTML5History extends History {
     }, onAbort)
   }
 
+  // 跳转，并替换浏览器当前路径
   replace (location: RawLocation, onComplete?: Function, onAbort?: Function) {
     const { current: fromRoute } = this
     this.transitionTo(location, route => {
@@ -73,6 +77,7 @@ export class HTML5History extends History {
     }, onAbort)
   }
 
+  // 当前路由路径与浏览器路径不相同，则push或replace更新浏览器路径
   ensureURL (push?: boolean) {
     if (getLocation(this.base) !== this.current.fullPath) {
       const current = cleanPath(this.base + this.current.fullPath)
@@ -80,6 +85,7 @@ export class HTML5History extends History {
     }
   }
 
+  // 获取当前浏览器地址
   getCurrentLocation (): string {
     return getLocation(this.base)
   }

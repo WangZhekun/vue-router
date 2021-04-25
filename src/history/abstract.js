@@ -6,7 +6,7 @@ import { NavigationFailureType, isNavigationFailure } from '../util/errors'
 
 export class AbstractHistory extends History {
   index: number
-  stack: Array<Route>
+  stack: Array<Route> // 跳转路由栈
 
   constructor (router: Router, base: ?string) {
     super(router, base)

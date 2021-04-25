@@ -25,18 +25,18 @@ export default class VueRouter {
   static NavigationFailureType: any
   static START_LOCATION: Route
 
-  app: any
-  apps: Array<any>
+  app: any // 主Vue实例
+  apps: Array<any> // 依赖当前Router实例的Vue实例列表
   ready: boolean
   readyCbs: Array<Function>
   options: RouterOptions
-  mode: string
-  history: HashHistory | HTML5History | AbstractHistory
-  matcher: Matcher
+  mode: string // 路由模式
+  history: HashHistory | HTML5History | AbstractHistory // 路由历史
+  matcher: Matcher // 匹配对象，包含match和addRoutes API
   fallback: boolean
-  beforeHooks: Array<?NavigationGuard>
-  resolveHooks: Array<?NavigationGuard>
-  afterHooks: Array<?AfterNavigationHook>
+  beforeHooks: Array<?NavigationGuard> // beforeEach钩子执行队列
+  resolveHooks: Array<?NavigationGuard> // beforeResolve钩子执行队列
+  afterHooks: Array<?AfterNavigationHook> // afterEach钩子执行队列
 
   constructor (options: RouterOptions = {}) {
     this.app = null
@@ -75,14 +75,17 @@ export default class VueRouter {
     }
   }
 
+  // 匹配raw对应的路由
   match (raw: RawLocation, current?: Route, redirectedFrom?: Location): Route {
     return this.matcher.match(raw, current, redirectedFrom)
   }
 
+  // 获取当前路由
   get currentRoute (): ?Route {
     return this.history && this.history.current
   }
 
+  // Router实例初始化
   init (app: any /* Vue component instance */) {
     process.env.NODE_ENV !== 'production' &&
       assert(
@@ -91,32 +94,32 @@ export default class VueRouter {
           `before creating root instance.`
       )
 
-    this.apps.push(app)
+    this.apps.push(app) // 维护依赖当前Router实例的Vue实例
 
     // set up app destroyed handler
     // https://github.com/vuejs/vue-router/issues/2639
-    app.$once('hook:destroyed', () => {
+    app.$once('hook:destroyed', () => { // 定义Vue实例销毁钩子
       // clean out app from this.apps array once destroyed
       const index = this.apps.indexOf(app)
-      if (index > -1) this.apps.splice(index, 1)
+      if (index > -1) this.apps.splice(index, 1) // 从依赖当前Router实例的Vue实例列表中移除
       // ensure we still have a main app or null if no apps
       // we do not release the router so it can be reused
-      if (this.app === app) this.app = this.apps[0] || null
+      if (this.app === app) this.app = this.apps[0] || null // 更新主Vue实例
 
-      if (!this.app) this.history.teardown()
+      if (!this.app) this.history.teardown() // 无主Vue实例时，执行注销回调列表内的函数
     })
 
     // main app previously initialized
     // return as we don't need to set up new history listener
-    if (this.app) {
+    if (this.app) { // 如果主Vue实例已存在
       return
     }
 
-    this.app = app
+    this.app = app // 设置主Vue实例
 
     const history = this.history
 
-    if (history instanceof HTML5History || history instanceof HashHistory) {
+    if (history instanceof HTML5History || history instanceof HashHistory) { // 客户端渲染
       const handleInitialScroll = routeOrError => {
         const from = history.current
         const expectScroll = this.options.scrollBehavior
@@ -127,43 +130,49 @@ export default class VueRouter {
         }
       }
       const setupListeners = routeOrError => {
-        history.setupListeners()
+        history.setupListeners() // 初始化注销回调列表
         handleInitialScroll(routeOrError)
       }
-      history.transitionTo(
+      history.transitionTo( // 跳转到当前地址的路由
         history.getCurrentLocation(),
         setupListeners,
         setupListeners
       )
     }
 
-    history.listen(route => {
-      this.apps.forEach(app => {
+    history.listen(route => { // 注册当前路由变更后的回调
+      this.apps.forEach(app => { // 更新Vue实例的_route属性，触发组件重新渲染
         app._route = route
       })
     })
   }
 
+  // 注册beforeEach钩子
   beforeEach (fn: Function): Function {
     return registerHook(this.beforeHooks, fn)
   }
 
+  // 注册beforeResolve钩子
   beforeResolve (fn: Function): Function {
     return registerHook(this.resolveHooks, fn)
   }
 
+  // 注册afterEach钩子
   afterEach (fn: Function): Function {
     return registerHook(this.afterHooks, fn)
   }
 
+  // 注册跳转完成后的回调
   onReady (cb: Function, errorCb?: Function) {
     this.history.onReady(cb, errorCb)
   }
 
+  // 注册错误回调
   onError (errorCb: Function) {
     this.history.onError(errorCb)
   }
 
+  // 跳转
   push (location: RawLocation, onComplete?: Function, onAbort?: Function) {
     // $flow-disable-line
     if (!onComplete && !onAbort && typeof Promise !== 'undefined') {
@@ -175,6 +184,7 @@ export default class VueRouter {
     }
   }
 
+  // 替换
   replace (location: RawLocation, onComplete?: Function, onAbort?: Function) {
     // $flow-disable-line
     if (!onComplete && !onAbort && typeof Promise !== 'undefined') {
@@ -198,6 +208,7 @@ export default class VueRouter {
     this.go(1)
   }
 
+  // 获取匹配的组件
   getMatchedComponents (to?: RawLocation | Route): Array<any> {
     const route: any = to
       ? to.matched
@@ -207,7 +218,7 @@ export default class VueRouter {
     if (!route) {
       return []
     }
-    return [].concat.apply(
+    return [].concat.apply( // 合并各个匹配的路由的组件列表
       [],
       route.matched.map(m => {
         return Object.keys(m.components).map(key => {
@@ -217,6 +228,7 @@ export default class VueRouter {
     )
   }
 
+  // 解析目标位置
   resolve (
     to: RawLocation,
     current?: Route,
@@ -229,12 +241,12 @@ export default class VueRouter {
     normalizedTo: Location,
     resolved: Route
   } {
-    current = current || this.history.current
-    const location = normalizeLocation(to, current, append, this)
-    const route = this.match(location, current)
-    const fullPath = route.redirectedFrom || route.fullPath
+    current = current || this.history.current // 当前路由
+    const location = normalizeLocation(to, current, append, this) // 处理目标位置
+    const route = this.match(location, current) // 匹配路由
+    const fullPath = route.redirectedFrom || route.fullPath // 路由的完整路径
     const base = this.history.base
-    const href = createHref(base, fullPath, this.mode)
+    const href = createHref(base, fullPath, this.mode) // 创建url
     return {
       location,
       route,
@@ -256,6 +268,7 @@ export default class VueRouter {
     }
   }
 
+  // 添加路由，并跳转到当前地址
   addRoutes (routes: Array<RouteConfig>) {
     if (process.env.NODE_ENV !== 'production') {
       warn(false, 'router.addRoutes() is deprecated and has been removed in Vue Router 4. Use router.addRoute() instead.')

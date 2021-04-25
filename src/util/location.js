@@ -8,16 +8,16 @@ import { warn } from './warn'
 import { extend } from './misc'
 
 export function normalizeLocation (
-  raw: RawLocation,
-  current: ?Route,
-  append: ?boolean,
+  raw: RawLocation, // 目标路径
+  current: ?Route, // 当前路由
+  append: ?boolean, 
   router: ?VueRouter
 ): Location {
   let next: Location = typeof raw === 'string' ? { path: raw } : raw
   // named target
-  if (next._normalized) {
+  if (next._normalized) { // 已处理
     return next
-  } else if (next.name) {
+  } else if (next.name) { // 有name属性
     next = extend({}, raw)
     const params = next.params
     if (params && typeof params === 'object') {
@@ -30,7 +30,7 @@ export function normalizeLocation (
   if (!next.path && next.params && current) {
     next = extend({}, next)
     next._normalized = true
-    const params: any = extend(extend({}, current.params), next.params)
+    const params: any = extend(extend({}, current.params), next.params) // 合并参数
     if (current.name) {
       next.name = current.name
       next.params = params

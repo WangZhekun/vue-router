@@ -23,15 +23,15 @@ import {
 
 export class History {
   router: Router
-  base: string
-  current: Route
-  pending: ?Route
-  cb: (r: Route) => void
-  ready: boolean
-  readyCbs: Array<Function>
-  readyErrorCbs: Array<Function>
-  errorCbs: Array<Function>
-  listeners: Array<Function>
+  base: string // 基础路径
+  current: Route // 当前路由
+  pending: ?Route // 跳转中的目标路由
+  cb: (r: Route) => void // 当前路由更新时的回调
+  ready: boolean // 跳转完成
+  readyCbs: Array<Function> // 跳转完成的回调
+  readyErrorCbs: Array<Function> // 跳转错误回调
+  errorCbs: Array<Function> // 错误回调
+  listeners: Array<Function> // 注销回调
   cleanupListeners: Function
 
   // implemented by sub-classes
@@ -50,7 +50,7 @@ export class History {
     this.router = router
     this.base = normalizeBase(base)
     // start with a route object that stands for "nowhere"
-    this.current = START
+    this.current = START 
     this.pending = null
     this.ready = false
     this.readyCbs = []
@@ -59,6 +59,7 @@ export class History {
     this.listeners = []
   }
 
+  // 添加更新当前路由时的回调
   listen (cb: Function) {
     this.cb = cb
   }
@@ -78,15 +79,16 @@ export class History {
     this.errorCbs.push(errorCb)
   }
 
+  // 路由跳转
   transitionTo (
-    location: RawLocation,
-    onComplete?: Function,
-    onAbort?: Function
+    location: RawLocation, // 目标地址
+    onComplete?: Function, // 完毕回调
+    onAbort?: Function // 错误回调
   ) {
     let route
     // catch redirect option https://github.com/vuejs/vue-router/issues/3201
     try {
-      route = this.router.match(location, this.current)
+      route = this.router.match(location, this.current) // 匹配路由
     } catch (e) {
       this.errorCbs.forEach(cb => {
         cb(e)
@@ -96,16 +98,16 @@ export class History {
     }
     const prev = this.current
     this.confirmTransition(
-      route,
-      () => {
-        this.updateRoute(route)
-        onComplete && onComplete(route)
-        this.ensureURL()
-        this.router.afterHooks.forEach(hook => {
+      route, // 目标路由
+      () => { // 完毕回调
+        this.updateRoute(route) // 更新当前路由
+        onComplete && onComplete(route) // 执行完毕回调
+        this.ensureURL() // 更新浏览器地址
+        this.router.afterHooks.forEach(hook => { // 执行Router的钩子
           hook && hook(route, prev)
         })
 
-        // fire ready cbs once
+        // fire ready cbs once 置就绪状态
         if (!this.ready) {
           this.ready = true
           this.readyCbs.forEach(cb => {
@@ -113,11 +115,11 @@ export class History {
           })
         }
       },
-      err => {
-        if (onAbort) {
+      err => { // 错误回调
+        if (onAbort) { // 执行错误回调
           onAbort(err)
         }
-        if (err && !this.ready) {
+        if (err && !this.ready) { // 置就绪状态
           // Initial redirection should not mark the history as ready yet
           // because it's triggered by the redirection instead
           // https://github.com/vuejs/vue-router/issues/3225
@@ -133,6 +135,7 @@ export class History {
     )
   }
 
+  // 路由跳转
   confirmTransition (route: Route, onComplete: Function, onAbort?: Function) {
     const current = this.current
     this.pending = route
@@ -153,33 +156,37 @@ export class History {
       onAbort && onAbort(err)
     }
     const lastRouteIndex = route.matched.length - 1
-    const lastCurrentIndex = current.matched.length - 1
+    const lastCurrentIndex = current.matched.lengt·h - 1
     if (
-      isSameRoute(route, current) &&
+      isSameRoute(route, current) && // 目标路由与当前路由是同一个路由，参数等都相同
       // in the case the route map has been dynamically appended to
-      lastRouteIndex === lastCurrentIndex &&
-      route.matched[lastRouteIndex] === current.matched[lastCurrentIndex]
+      lastRouteIndex === lastCurrentIndex && // 匹配路由列表长度相同
+      route.matched[lastRouteIndex] === current.matched[lastCurrentIndex] // 匹配路由列表的最后一个路由相同
     ) {
-      this.ensureURL()
-      return abort(createNavigationDuplicatedError(current, route))
+      this.ensureURL() // 更新浏览器地址
+      return abort(createNavigationDuplicatedError(current, route)) // 执行错误回调
     }
 
-    const { updated, deactivated, activated } = resolveQueue(
+    const { 
+      updated, // 匹配列表的相同路由
+      deactivated, // 当前路由的匹配列表剩余路由
+      activated // 新路由的匹配列表剩余路由
+    } = resolveQueue(
       this.current.matched,
       route.matched
     )
 
-    const queue: Array<?NavigationGuard> = [].concat(
+    const queue: Array<?NavigationGuard> = [].concat( // 合并钩子函数列表
       // in-component leave guards
-      extractLeaveGuards(deactivated),
+      extractLeaveGuards(deactivated), // 老路由涉及的组件的beforeRouteLeave钩子函数
       // global before hooks
-      this.router.beforeHooks,
+      this.router.beforeHooks, // router的before钩子函数
       // in-component update hooks
-      extractUpdateHooks(updated),
+      extractUpdateHooks(updated), // 相同路由涉及的组件的beforeRouteUpdate钩子函数
       // in-config enter guards
-      activated.map(m => m.beforeEnter),
+      activated.map(m => m.beforeEnter), // 新路由涉及的组件的beforeEnter钩子函数
       // async components
-      resolveAsyncComponents(activated)
+      resolveAsyncComponents(activated) // 返回钩子函数，该钩子函数是执行异步组件工厂函数获取组件配置对象
     )
 
     const iterator = (hook: NavigationGuard, next) => {
@@ -187,6 +194,7 @@ export class History {
         return abort(createNavigationCancelledError(current, route))
       }
       try {
+        // 执行钩子
         hook(route, current, (to: any) => {
           if (to === false) {
             // next(false) -> abort navigation, ensure current URL
@@ -199,7 +207,7 @@ export class History {
             typeof to === 'string' ||
             (typeof to === 'object' &&
               (typeof to.path === 'string' || typeof to.name === 'string'))
-          ) {
+          ) { // 重定向
             // next('/') or next({ path: '/' }) -> redirect
             abort(createNavigationRedirectedError(current, route))
             if (typeof to === 'object' && to.replace) {
@@ -220,14 +228,15 @@ export class History {
     runQueue(queue, iterator, () => {
       // wait until async components are resolved before
       // extracting in-component enter guards
-      const enterGuards = extractEnterGuards(activated)
-      const queue = enterGuards.concat(this.router.resolveHooks)
+      const enterGuards = extractEnterGuards(activated) // 新路由剩余路由涉及的组件的beforeRouteEnter钩子函数
+      const queue = enterGuards.concat(this.router.resolveHooks) // 同beforeResolve钩子执行队列做合并
+      // 执行钩子函数队列
       runQueue(queue, iterator, () => {
         if (this.pending !== route) {
           return abort(createNavigationCancelledError(current, route))
         }
         this.pending = null
-        onComplete(route)
+        onComplete(route) // 跳转完成
         if (this.router.app) {
           this.router.app.$nextTick(() => {
             handleRouteEntered(route)
@@ -237,6 +246,7 @@ export class History {
     })
   }
 
+  // 更新当前路由
   updateRoute (route: Route) {
     this.current = route
     this.cb && this.cb(route)
@@ -246,6 +256,7 @@ export class History {
     // Default implementation is empty
   }
 
+  // 执行注销回调列表内的函数
   teardown () {
     // clean up event listeners
     // https://github.com/vuejs/vue-router/issues/2341
@@ -297,29 +308,39 @@ function resolveQueue (
     }
   }
   return {
-    updated: next.slice(0, i),
-    activated: next.slice(i),
-    deactivated: current.slice(i)
+    updated: next.slice(0, i), // 匹配列表的相同路由
+    activated: next.slice(i), // 新路由的匹配列表剩余路由
+    deactivated: current.slice(i) // 当前路由的匹配列表剩余路由
   }
 }
 
+/**
+ * 获取路由记录的所有组件的所有name的钩子函数
+ * @param {Array<RouteRecord>} records 路由记录
+ * @param {string} name 钩子名称
+ * @param {Function} bind 绑定函数
+ * @param {boolean} reverse 是否反转
+ * @returns 
+ */
 function extractGuards (
-  records: Array<RouteRecord>,
-  name: string,
-  bind: Function,
-  reverse?: boolean
+  records: Array<RouteRecord>, // 路由记录
+  name: string, // 钩子名称
+  bind: Function, // 绑定函数
+  reverse?: boolean // 是否反转钩子的执行顺序
 ): Array<?Function> {
-  const guards = flatMapComponents(records, (def, instance, match, key) => {
-    const guard = extractGuard(def, name)
+  // 获取路由记录的所有组件的所有name的钩子函数
+  const guards = flatMapComponents(records, (def, instance, match, key) => { // def为Vue组件，instance为Vue实例，match为路由记录，key为Vue组件在match.components中的属性名
+    const guard = extractGuard(def, name) // 返回Vue组件的钩子的方法
     if (guard) {
       return Array.isArray(guard)
         ? guard.map(guard => bind(guard, instance, match, key))
-        : bind(guard, instance, match, key)
+        : bind(guard, instance, match, key) // 将钩子的方法绑定到Vue实例上
     }
   })
-  return flatten(reverse ? guards.reverse() : guards)
+  return flatten(reverse ? guards.reverse() : guards) // 合并钩子函数为一个数组
 }
 
+// 返回def（Vue组件）的key属性的值
 function extractGuard (
   def: Object | Function,
   key: string
@@ -328,17 +349,29 @@ function extractGuard (
     // extend now so that global mixins are applied.
     def = _Vue.extend(def)
   }
-  return def.options[key]
+  return def.options[key] 
 }
 
+/**
+ * 获取deactivated路由记录中所有组件的所有beforeRouteLeave钩子的执行函数
+ * @param {Array<RouteRecord} deactivated 老路由匹配列表中需要调用beforeRouteLeave钩子的路由记录
+ * @returns 
+ */
 function extractLeaveGuards (deactivated: Array<RouteRecord>): Array<?Function> {
   return extractGuards(deactivated, 'beforeRouteLeave', bindGuard, true)
 }
 
+// 获取updated路由记录中所有组件的所有beforeRouteUpdate钩子的执行函数
 function extractUpdateHooks (updated: Array<RouteRecord>): Array<?Function> {
   return extractGuards(updated, 'beforeRouteUpdate', bindGuard)
 }
 
+/**
+ * 返回一个可以执行guard的函数，并将guard的this，绑定到instance
+ * @param {NavigationGuard} guard 待执行函数
+ * @param {_Vue} instance Vue实例
+ * @returns 
+ */
 function bindGuard (guard: NavigationGuard, instance: ?_Vue): ?NavigationGuard {
   if (instance) {
     return function boundRouteGuard () {
@@ -347,6 +380,11 @@ function bindGuard (guard: NavigationGuard, instance: ?_Vue): ?NavigationGuard {
   }
 }
 
+/**
+ * 获取activated路由记录中所有组件的所有beforeRouteEnter钩子的执行函数
+ * @param {Array<RouteRecord>} activated 新路由的匹配列表剩余路由
+ * @returns 
+ */
 function extractEnterGuards (
   activated: Array<RouteRecord>
 ): Array<?Function> {
@@ -359,12 +397,20 @@ function extractEnterGuards (
   )
 }
 
+/**
+ * 返回guard的执行器，收集由guard第三个参数返回的回调函数
+ * @param {NavigationGuard} guard 待执行函数
+ * @param {RouteRecord} match 路由记录 
+ * @param {string} key 
+ * @returns 
+ */
 function bindEnterGuard (
   guard: NavigationGuard,
   match: RouteRecord,
   key: string
 ): NavigationGuard {
   return function routeEnterGuard (to, from, next) {
+    // 执行钩子函数，将回调函数插入到进入路由之后的回调队列
     return guard(to, from, cb => {
       if (typeof cb === 'function') {
         if (!match.enteredCbs[key]) {

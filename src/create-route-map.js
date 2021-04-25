@@ -22,11 +22,12 @@ export function createRouteMap (
   // $flow-disable-line
   const nameMap: Dictionary<RouteRecord> = oldNameMap || Object.create(null)
 
+  // 遍历路由
   routes.forEach(route => {
-    addRouteRecord(pathList, pathMap, nameMap, route, parentRoute)
+    addRouteRecord(pathList, pathMap, nameMap, route, parentRoute) // 递归转换route为RouteRecord，并维护path和name到RouteRecord的映射关系
   })
 
-  // ensure wildcard routes are always at the end
+  // ensure wildcard routes are always at the end 将* path排在最后边
   for (let i = 0, l = pathList.length; i < l; i++) {
     if (pathList[i] === '*') {
       pathList.push(pathList.splice(i, 1)[0])
@@ -48,19 +49,20 @@ export function createRouteMap (
   }
 
   return {
-    pathList,
-    pathMap,
-    nameMap
+    pathList, // path列表
+    pathMap, // path到RouteRecord的映射关系
+    nameMap // name到RouteRecord的映射关系
   }
 }
 
+// 递归转换route为RouteRecord，并维护path和name到RouteRecord的映射关系
 function addRouteRecord (
-  pathList: Array<string>,
-  pathMap: Dictionary<RouteRecord>,
-  nameMap: Dictionary<RouteRecord>,
-  route: RouteConfig,
-  parent?: RouteRecord,
-  matchAs?: string
+  pathList: Array<string>, // path列表
+  pathMap: Dictionary<RouteRecord>, // path到RouteRecord的映射关系
+  nameMap: Dictionary<RouteRecord>, // name到RouteRecord的映射关系
+  route: RouteConfig, // 要添加的路由
+  parent?: RouteRecord, // 父路由的RouteRecord
+  matchAs?: string // path
 ) {
   const { path, name } = route
   if (process.env.NODE_ENV !== 'production') {
@@ -91,15 +93,15 @@ function addRouteRecord (
 
   const record: RouteRecord = {
     path: normalizedPath,
-    regex: compileRouteRegex(normalizedPath, pathToRegexpOptions),
-    components: route.components || { default: route.component },
+    regex: compileRouteRegex(normalizedPath, pathToRegexpOptions), // path对应的正则表达式
+    components: route.components || { default: route.component },  // TODO 文档里components字段怎么描述
     alias: route.alias
       ? typeof route.alias === 'string'
         ? [route.alias]
         : route.alias
       : [],
     instances: {},
-    enteredCbs: {},
+    enteredCbs: {}, // 进入该路由之后的回调队列
     name,
     parent,
     matchAs,
@@ -190,11 +192,12 @@ function addRouteRecord (
   }
 }
 
+// 将path转化成正则表达式
 function compileRouteRegex (
   path: string,
   pathToRegexpOptions: PathToRegexpOptions
 ): RouteRegExp {
-  const regex = Regexp(path, [], pathToRegexpOptions)
+  const regex = Regexp(path, [], pathToRegexpOptions) // TODO 看看path-to-regexp
   if (process.env.NODE_ENV !== 'production') {
     const keys: any = Object.create(null)
     regex.keys.forEach(key => {
@@ -208,13 +211,14 @@ function compileRouteRegex (
   return regex
 }
 
+// 处理path为标准格式
 function normalizePath (
   path: string,
   parent?: RouteRecord,
   strict?: boolean
 ): string {
-  if (!strict) path = path.replace(/\/$/, '')
-  if (path[0] === '/') return path
+  if (!strict) path = path.replace(/\/$/, '') // 去掉结尾/
+  if (path[0] === '/') return path // path以/开头
   if (parent == null) return path
   return cleanPath(`${parent.path}/${path}`)
 }

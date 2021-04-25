@@ -20,7 +20,11 @@ export function createMatcher (
   routes: Array<RouteConfig>,
   router: VueRouter
 ): Matcher {
-  const { pathList, pathMap, nameMap } = createRouteMap(routes)
+  const { 
+    pathList, // path列表
+    pathMap, // path到RouteRecord的映射关系
+    nameMap // name到RouteRecord的映射关系
+  } = createRouteMap(routes) // 处理routes，生成path和name到RouteRecord的映射关系
 
   function addRoutes (routes) {
     createRouteMap(routes, pathList, pathMap, nameMap)
@@ -48,30 +52,31 @@ export function createMatcher (
     return pathList.map(path => pathMap[path])
   }
 
+  // 匹配raw对应的路由
   function match (
-    raw: RawLocation,
-    currentRoute?: Route,
-    redirectedFrom?: Location
+    raw: RawLocation, // 路径
+    currentRoute?: Route, // 当前路由
+    redirectedFrom?: Location // 重定向来源路径
   ): Route {
     const location = normalizeLocation(raw, currentRoute, false, router)
     const { name } = location
 
-    if (name) {
+    if (name) { // 以name匹配路由
       const record = nameMap[name]
       if (process.env.NODE_ENV !== 'production') {
         warn(record, `Route with name '${name}' does not exist`)
       }
-      if (!record) return _createRoute(null, location)
+      if (!record) return _createRoute(null, location) // 未匹配中，创建新路由对象
       const paramNames = record.regex.keys
-        .filter(key => !key.optional)
-        .map(key => key.name)
+        .filter(key => !key.optional) // 过滤可选属性
+        .map(key => key.name) // TODO 这是什么
 
-      if (typeof location.params !== 'object') {
+      if (typeof location.params !== 'object') { // 初始化参数
         location.params = {}
       }
 
       if (currentRoute && typeof currentRoute.params === 'object') {
-        for (const key in currentRoute.params) {
+        for (const key in currentRoute.params) { // 将当前路由的参数搬运到location中
           if (!(key in location.params) && paramNames.indexOf(key) > -1) {
             location.params[key] = currentRoute.params[key]
           }
@@ -80,7 +85,7 @@ export function createMatcher (
 
       location.path = fillParams(record.path, location.params, `named route "${name}"`)
       return _createRoute(record, location, redirectedFrom)
-    } else if (location.path) {
+    } else if (location.path) { // 以path匹配
       location.params = {}
       for (let i = 0; i < pathList.length; i++) {
         const path = pathList[i]
@@ -175,25 +180,26 @@ export function createMatcher (
     return _createRoute(null, location)
   }
 
+  // 创建record对应的路由
   function _createRoute (
     record: ?RouteRecord,
     location: Location,
     redirectedFrom?: Location
   ): Route {
     if (record && record.redirect) {
-      return redirect(record, redirectedFrom || location)
+      return redirect(record, redirectedFrom || location) // 匹配重定向目标的路由
     }
     if (record && record.matchAs) {
-      return alias(record, location, record.matchAs)
+      return alias(record, location, record.matchAs) // 匹配别名的路由
     }
-    return createRoute(record, location, redirectedFrom, router)
+    return createRoute(record, location, redirectedFrom, router) // 创建一个Route对象
   }
 
   return {
     match,
     addRoute,
     getRoutes,
-    addRoutes
+    addRoutes // 添加路由
   }
 }
 

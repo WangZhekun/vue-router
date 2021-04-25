@@ -5,6 +5,7 @@ import { stringifyQuery } from './query'
 
 const trailingSlashRE = /\/?$/
 
+// 创建一个Route对象
 export function createRoute (
   record: ?RouteRecord,
   location: Location,
@@ -25,11 +26,11 @@ export function createRoute (
     hash: location.hash || '',
     query,
     params: location.params || {},
-    fullPath: getFullPath(location, stringifyQuery),
-    matched: record ? formatMatch(record) : []
+    fullPath: getFullPath(location, stringifyQuery), // 解析后的URL，包含查询参数和has的完整路径
+    matched: record ? formatMatch(record) : [] // 当前路由嵌套路径片段的路由记录
   }
   if (redirectedFrom) {
-    route.redirectedFrom = getFullPath(redirectedFrom, stringifyQuery)
+    route.redirectedFrom = getFullPath(redirectedFrom, stringifyQuery) // 重定向来源的路由名字
   }
   return Object.freeze(route)
 }
